@@ -8,11 +8,11 @@ import {
 } from "./storage";
 
 export const DEFAULT_INITIAL_EVENT: CountdownEvent = {
-  id: "initial-event",
-  title: "🚀 Big Milestone Launch",
+  id: "default-milestone-event",
+  title: "🚀 Big Product Launch",
   targetDate: "2026-10-01T12:00:00.000Z",
   createdAt: "2026-09-22T00:00:00.000Z",
-  notes: "Count down to your upcoming milestone!",
+  notes: "Get ready for the major reveal!",
 };
 
 type Listener = () => void;
@@ -47,6 +47,7 @@ function getActiveEventSnapshot(): CountdownEvent {
 
   if (!initialized) {
     initialized = true;
+
     // 1. Check URL parameters (?title=...&target=...)
     const params = new URLSearchParams(window.location.search);
     const titleParam = params.get("title");
@@ -54,15 +55,39 @@ function getActiveEventSnapshot(): CountdownEvent {
     const notesParam = params.get("notes");
 
     if (titleParam && targetParam) {
+      // Check if event already exists in history to reuse ID
+      const history = getStoredEventHistory();
+      const existing = history.find(
+        (e) =>
+          e.title.trim().toLowerCase() === titleParam.trim().toLowerCase() &&
+          e.targetDate === targetParam
+      );
+
+      const sharedId =
+        existing?.id ||
+        "shared-" +
+          Math.abs(
+            (titleParam + targetParam).split("").reduce((acc, c) => (acc << 5) - acc + c.charCodeAt(0), 0)
+          ).toString(36);
+
       const shared: CountdownEvent = {
-        id: "shared-" + Math.random().toString(36).substring(2, 8),
+        id: sharedId,
         title: titleParam,
         targetDate: targetParam,
-        createdAt: new Date().toISOString(),
-        notes: notesParam || undefined,
+        createdAt: existing?.createdAt || new Date().toISOString(),
+        notes: notesParam || existing?.notes || undefined,
       };
+
       saveStoredActiveEvent(shared);
       cachedEvent = shared;
+
+      // Clean query parameters from URL bar to prevent duplicate imports on refresh
+      try {
+        window.history.replaceState({}, "", window.location.pathname);
+      } catch {
+        // ignore
+      }
+
       return shared;
     }
 
@@ -73,35 +98,31 @@ function getActiveEventSnapshot(): CountdownEvent {
       return stored;
     }
 
-    // 3. Fallback: 3 days in the future
-    const target = new Date();
-    target.setDate(target.getDate() + 3);
-    target.setHours(12, 0, 0, 0);
-    const freshDefault: CountdownEvent = {
-      id: "event-" + Date.now(),
-      title: "🚀 Big Product Launch",
-      targetDate: target.toISOString(),
-      createdAt: new Date().toISOString(),
-      notes: "Get ready for the major reveal!",
-    };
-    saveStoredActiveEvent(freshDefault);
-    cachedEvent = freshDefault;
-    return freshDefault;
+    // 3. Fallback to constant default event (do not invent random ID)
+    saveStoredActiveEvent(DEFAULT_INITIAL_EVENT);
+    cachedEvent = DEFAULT_INITIAL_EVENT;
+    return DEFAULT_INITIAL_EVENT;
   }
 
   return cachedEvent || DEFAULT_INITIAL_EVENT;
 }
 
 const EMPTY_HISTORY: CountdownEvent[] = [];
-
 let cachedHistory: CountdownEvent[] = EMPTY_HISTORY;
+
 function getHistorySnapshot(): CountdownEvent[] {
   if (typeof window === "undefined") return EMPTY_HISTORY;
   const stored = getStoredEventHistory();
-  // Avoid returning new reference if contents are the same to prevent re-renders
-  if (JSON.stringify(stored) !== JSON.stringify(cachedHistory)) {
-    cachedHistory = stored;
+
+  // Return same reference if items are identical
+  if (
+    stored.length === cachedHistory.length &&
+    stored.every((item, i) => item.id === cachedHistory[i]?.id)
+  ) {
+    return cachedHistory;
   }
+
+  cachedHistory = stored;
   return cachedHistory;
 }
 
