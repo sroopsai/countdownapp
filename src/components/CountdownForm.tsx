@@ -23,7 +23,7 @@ export default function CountdownForm({
     return toDatetimeLocalValue(d);
   };
 
-  const [title, setTitle] = useState(initialEvent?.title || "My Milestone Event");
+  const [title, setTitle] = useState(initialEvent?.title || "");
   const [targetDateStr, setTargetDateStr] = useState(
     initialEvent ? toDatetimeLocalValue(new Date(initialEvent.targetDate)) : getDefaultTarget()
   );
@@ -76,7 +76,7 @@ export default function CountdownForm({
       <div className="flex items-center justify-between pb-4 mb-6 border-b border-zinc-100 dark:border-zinc-800">
         <div>
           <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-            {initialEvent ? "Edit Countdown" : "Create Countdown"}
+            {initialEvent ? "Edit Countdown" : "Add New Event"}
           </h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
             Set your target date and watch the time tick down.
@@ -209,7 +209,7 @@ export default function CountdownForm({
           type="submit"
           className="px-5 py-2 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition active:scale-95 cursor-pointer"
         >
-          {initialEvent ? "Update Countdown" : "Start Countdown"}
+          {initialEvent ? "Save Changes" : "Create Event"}
         </button>
       </div>
     </form>

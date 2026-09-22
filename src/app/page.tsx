@@ -15,23 +15,24 @@ import {
   Check,
   History,
   Trash2,
+  CalendarPlus,
 } from "lucide-react";
 
 export default function Home() {
   const [currentEvent, setCurrentEvent] = useActiveCountdown();
   const [history, deleteHistoryItem] = useCountdownHistory();
-  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const isMounted = useMounted();
 
   const handleSaveEvent = (savedEvent: CountdownEvent) => {
     setCurrentEvent(savedEvent);
-    setIsEditing(false);
+    setFormMode(null);
   };
 
   const handleSelectHistoryEvent = (event: CountdownEvent) => {
     setCurrentEvent(event);
-    setIsEditing(false);
+    setFormMode(null);
   };
 
   const handleDeleteHistoryEvent = (id: string, e: React.MouseEvent) => {
@@ -67,16 +68,13 @@ export default function Home() {
               <span className="font-black text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-violet-500 bg-clip-text text-transparent">
                 CountdownApp
               </span>
-              <span className="hidden sm:inline-block ml-2 text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300">
-                Phase 1
-              </span>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleShare}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs sm:text-sm font-medium transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs sm:text-sm font-medium transition cursor-pointer"
             >
               {copied ? (
                 <>
@@ -86,23 +84,33 @@ export default function Home() {
               ) : (
                 <>
                   <Share2 className="w-4 h-4 text-zinc-500" />
-                  <span>Share</span>
+                  <span className="hidden sm:inline">Share</span>
                 </>
               )}
             </button>
 
-            {!isEditing ? (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition active:scale-95 cursor-pointer"
-              >
-                <Edit3 className="w-4 h-4" />
-                <span>Edit Target</span>
-              </button>
+            {formMode === null ? (
+              <>
+                <button
+                  onClick={() => setFormMode("edit")}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs sm:text-sm font-medium transition cursor-pointer"
+                >
+                  <Edit3 className="w-4 h-4 text-zinc-500" />
+                  <span className="hidden sm:inline">Edit</span>
+                </button>
+
+                <button
+                  onClick={() => setFormMode("create")}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition active:scale-95 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add New Event</span>
+                </button>
+              </>
             ) : (
               <button
-                onClick={() => setIsEditing(false)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-medium transition cursor-pointer"
+                onClick={() => setFormMode(null)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs sm:text-sm font-medium transition cursor-pointer"
               >
                 Cancel
               </button>
@@ -113,12 +121,12 @@ export default function Home() {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 max-w-4xl mx-auto w-full">
-        {isEditing ? (
+        {formMode !== null ? (
           <div className="w-full animate-fade-in my-6">
             <CountdownForm
-              initialEvent={currentEvent}
+              initialEvent={formMode === "edit" ? currentEvent : null}
               onSave={handleSaveEvent}
-              onCancel={() => setIsEditing(false)}
+              onCancel={() => setFormMode(null)}
             />
           </div>
         ) : (
@@ -126,24 +134,32 @@ export default function Home() {
             <CountdownDisplay
               key={`${currentEvent.id}-${currentEvent.targetDate}`}
               event={currentEvent}
-              onEdit={() => setIsEditing(true)}
+              onEdit={() => setFormMode("edit")}
             />
 
             {/* Sub-card actions */}
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <button
-                onClick={() => setIsEditing(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-medium text-zinc-600 dark:text-zinc-300 transition shadow-xs cursor-pointer"
+                onClick={() => setFormMode("create")}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition active:scale-95 cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" />
-                Change Target Date
+                <Plus className="w-4 h-4" />
+                Add New Event
+              </button>
+
+              <button
+                onClick={() => setFormMode("edit")}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-200 transition shadow-xs cursor-pointer"
+              >
+                <Edit3 className="w-4 h-4 text-zinc-500" />
+                Edit Target
               </button>
 
               <button
                 onClick={handleShare}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-medium text-zinc-600 dark:text-zinc-300 transition shadow-xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-200 transition shadow-xs cursor-pointer"
               >
-                <Share2 className="w-3.5 h-3.5" />
+                <Share2 className="w-4 h-4 text-zinc-500" />
                 {copied ? "Copied Link!" : "Copy Share Link"}
               </button>
 
@@ -158,9 +174,9 @@ export default function Home() {
                   };
                   setCurrentEvent(testEvent);
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-medium hover:bg-amber-100 transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs sm:text-sm font-medium hover:bg-amber-100 transition cursor-pointer"
               >
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-4 h-4" />
                 Test 10-Sec Celebration
               </button>
             </div>
@@ -168,10 +184,20 @@ export default function Home() {
             {/* Saved Countdowns Section (localStorage persistence) */}
             {isMounted && history.length > 0 && (
               <div className="mt-14 w-full max-w-2xl border-t border-zinc-200 dark:border-zinc-800/80 pt-8">
-                <div className="flex items-center gap-2 mb-4 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                  <History className="w-4 h-4" />
-                  <span>Saved in your Browser ({history.length})</span>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                    <History className="w-4 h-4" />
+                    <span>Saved in your Browser ({history.length})</span>
+                  </div>
+                  <button
+                    onClick={() => setFormMode("create")}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                  >
+                    <CalendarPlus className="w-3.5 h-3.5" />
+                    <span>Add New Event</span>
+                  </button>
                 </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {history.map((item) => {
                     const isSelected = item.id === currentEvent.id;
@@ -181,7 +207,7 @@ export default function Home() {
                         onClick={() => handleSelectHistoryEvent(item)}
                         className={`flex items-center justify-between p-3.5 rounded-2xl border transition cursor-pointer ${
                           isSelected
-                            ? "bg-indigo-50 dark:bg-indigo-950/30 border-indigo-300 dark:border-indigo-800"
+                            ? "bg-indigo-50 dark:bg-indigo-950/30 border-indigo-300 dark:border-indigo-800 ring-1 ring-indigo-500/20"
                             : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
                         }`}
                       >
