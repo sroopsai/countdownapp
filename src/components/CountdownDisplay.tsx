@@ -56,7 +56,9 @@ export default function CountdownDisplay({ event, onEdit }: CountdownDisplayProp
       <div className="text-center mb-8">
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 mb-3">
           <Clock className="w-3.5 h-3.5" />
-          {time.isComplete ? "Event Completed" : "Countdown in progress"}
+          <span suppressHydrationWarning>
+            {time.isComplete ? "Event Completed" : "Countdown in progress"}
+          </span>
         </span>
         <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
           {event.title}
@@ -68,7 +70,7 @@ export default function CountdownDisplay({ event, onEdit }: CountdownDisplayProp
         )}
         <div className="mt-3 flex items-center justify-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
           <Calendar className="w-4 h-4" />
-          <span>{formatReadableDate(event.targetDate)}</span>
+          <span suppressHydrationWarning>{formatReadableDate(event.targetDate)}</span>
         </div>
       </div>
 
@@ -110,7 +112,10 @@ export default function CountdownDisplay({ event, onEdit }: CountdownDisplayProp
             key={unit.label}
             className="flex flex-col items-center justify-center p-5 sm:p-7 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm transition hover:shadow-md"
           >
-            <span className="font-mono text-4xl sm:text-6xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+            <span
+              suppressHydrationWarning
+              className="font-mono text-4xl sm:text-6xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight"
+            >
               {unit.value}
             </span>
             <span className="mt-2 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
