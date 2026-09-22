@@ -92,9 +92,11 @@ function getActiveEventSnapshot(): CountdownEvent {
   return cachedEvent || DEFAULT_INITIAL_EVENT;
 }
 
-let cachedHistory: CountdownEvent[] = [];
+const EMPTY_HISTORY: CountdownEvent[] = [];
+
+let cachedHistory: CountdownEvent[] = EMPTY_HISTORY;
 function getHistorySnapshot(): CountdownEvent[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") return EMPTY_HISTORY;
   const stored = getStoredEventHistory();
   // Avoid returning new reference if contents are the same to prevent re-renders
   if (JSON.stringify(stored) !== JSON.stringify(cachedHistory)) {
@@ -123,7 +125,7 @@ export function useCountdownHistory(): [CountdownEvent[], (id: string) => void] 
   const history = useSyncExternalStore(
     subscribe,
     getHistorySnapshot,
-    () => []
+    () => EMPTY_HISTORY
   );
 
   const deleteItem = (id: string) => {
