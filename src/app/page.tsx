@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CountdownDisplay from "@/components/CountdownDisplay";
 import CountdownForm from "@/components/CountdownForm";
 import { CountdownEvent } from "@/types/countdown";
@@ -16,6 +16,7 @@ import {
   History,
   Trash2,
   CalendarPlus,
+  Database,
 } from "lucide-react";
 
 export default function Home() {
@@ -23,11 +24,44 @@ export default function Home() {
   const [history, deleteHistoryItem] = useCountdownHistory();
   const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
+  const [hasDb, setHasDb] = useState<boolean>(false);
   const isMounted = useMounted();
 
-  const handleSaveEvent = (savedEvent: CountdownEvent) => {
+  // Check if Neon database is configured
+  useEffect(() => {
+    let isCancelled = false;
+    fetch("/api/events")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isCancelled && data.hasDb) {
+          setHasDb(true);
+        }
+      })
+      .catch(() => {
+        // graceful offline / fallback
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  const handleSaveEvent = async (savedEvent: CountdownEvent) => {
     setCurrentEvent(savedEvent);
     setFormMode(null);
+
+    // If Neon DB is connected, save to DB in background
+    if (hasDb) {
+      try {
+        await fetch("/api/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(savedEvent),
+        });
+      } catch (err) {
+        console.warn("Failed to sync event to Neon database:", err);
+      }
+    }
   };
 
   const handleSelectHistoryEvent = (event: CountdownEvent) => {
@@ -35,21 +69,38 @@ export default function Home() {
     setFormMode(null);
   };
 
-  const handleDeleteHistoryEvent = (id: string, e: React.MouseEvent) => {
+  const handleDeleteHistoryEvent = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     deleteHistoryItem(id);
+
+    if (hasDb) {
+      try {
+        await fetch(`/api/events/${id}`, { method: "DELETE" });
+      } catch (err) {
+        console.warn("Failed to delete event from Neon database:", err);
+      }
+    }
   };
 
   const handleShare = () => {
     if (typeof window === "undefined") return;
-    const url = new URL(window.location.origin + window.location.pathname);
-    url.searchParams.set("title", currentEvent.title);
-    url.searchParams.set("target", currentEvent.targetDate);
-    if (currentEvent.notes) {
-      url.searchParams.set("notes", currentEvent.notes);
+
+    let shareUrl: string;
+    if (hasDb && currentEvent.id) {
+      // Clean short permalink when database is connected
+      shareUrl = `${window.location.origin}/c/${currentEvent.id}`;
+    } else {
+      // Portable URL query parameter link
+      const url = new URL(window.location.origin + window.location.pathname);
+      url.searchParams.set("title", currentEvent.title);
+      url.searchParams.set("target", currentEvent.targetDate);
+      if (currentEvent.notes) {
+        url.searchParams.set("notes", currentEvent.notes);
+      }
+      shareUrl = url.toString();
     }
 
-    navigator.clipboard.writeText(url.toString()).then(() => {
+    navigator.clipboard.writeText(shareUrl).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     });
@@ -68,6 +119,22 @@ export default function Home() {
               <span className="font-black text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-violet-500 bg-clip-text text-transparent">
                 CountdownApp
               </span>
+            </div>
+
+            {/* Storage status badge */}
+            <div className="hidden md:flex items-center ml-2">
+              {hasDb ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <Database className="w-3 h-3" /> Neon DB Active
+                </span>
+              ) : (
+                <span
+                  title="To connect Neon Postgres, add DATABASE_URL to your .env.local file or Vercel dashboard"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700"
+                >
+                  <Database className="w-3 h-3" /> Browser Storage
+                </span>
+              )}
             </div>
           </div>
 
@@ -176,18 +243,18 @@ export default function Home() {
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs sm:text-sm font-medium hover:bg-amber-100 transition cursor-pointer"
               >
-                <Sparkles className="w-4 h-4" />
+                <Sparkles className="w-3.5 h-3.5" />
                 Test 10-Sec Celebration
               </button>
             </div>
 
-            {/* Saved Countdowns Section (localStorage persistence) */}
+            {/* Saved Countdowns Section */}
             {isMounted && history.length > 0 && (
               <div className="mt-14 w-full max-w-2xl border-t border-zinc-200 dark:border-zinc-800/80 pt-8">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                     <History className="w-4 h-4" />
-                    <span>Saved in your Browser ({history.length})</span>
+                    <span>Saved Countdowns ({history.length})</span>
                   </div>
                   <button
                     onClick={() => setFormMode("create")}
@@ -245,7 +312,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="w-full py-6 border-t border-zinc-200 dark:border-zinc-800 text-center text-xs text-zinc-400 dark:text-zinc-500">
-        <p>Built with Next.js & Tailwind CSS • Auto-saved to Browser</p>
+        <p>Built with Next.js, Neon Postgres & Tailwind CSS • Ready for Vercel</p>
       </footer>
     </div>
   );
